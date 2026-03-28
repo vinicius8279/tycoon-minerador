@@ -1,1 +1,7 @@
 www.magnata-minerador-juto.com
+git init
+git add .
+git commit -m "primeira versão do jogo"
+git branch -M main
+git remote add origin https www.magnata-minerador-juto.com
+git push -u origin main

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tycoon Minerador</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0b1d33;
+  color:white;
+}
+
+.app{
+  max-width:420px;
+  margin:auto;
+  padding:10px;
+  background:#111;
+  min-height:100vh;
+}
+
+.status{
+  background:#222;
+  padding:10px;
+  border-radius:8px;
+  text-align:center;
+}
+
+button{
+  width:100%;
+  padding:10px;
+  margin:5px 0;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+}
+
+.mine{
+  background:#333;
+  padding:10px;
+  margin:5px 0;
+  border-radius:8px;
+  opacity:0.5;
+}
+
+.mine.unlocked{
+  opacity:1;
+  background:#444;
+}
+
+.mine.active{
+  background:gold;
+  color:black;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<h2>🏭 Tycoon Minerador</h2>
+
+<div class="status">
+💰 Dinheiro: <span id="money">0</span><br>
+📦 Estoque: <span id="storage">0</span><br>
+🚚 Pronto: <span id="ready">0</span>
+</div>
+
+<h3>🗺️ Minas</h3>
+
+<div id="m1" class="mine unlocked active" onclick="selectMine(1)">🪨 Pedra (Grátis)</div>
+
+<button onclick="buyMine(2)">🔓 Comprar Ferro ($100)</button>
+<div id="m2" class="mine" onclick="selectMine(2)">⛏️ Ferro</div>
+
+<button onclick="buyMine(3)">🔓 Comprar Ouro ($300)</button>
+<div id="m3" class="mine" onclick="selectMine(3)">🥇 Ouro</div>
+
+<button onclick="buyMine(4)">🔓 Comprar Diamante ($1000)</button>
+<div id="m4" class="mine" onclick="selectMine(4)">💎 Diamante</div>
+
+<button onclick="buyMine(5)">🔓 Comprar Safira ($5000)</button>
+<div id="m5" class="mine" onclick="selectMine(5)">💠 Safira</div>
+
+<hr>
+
+<button onclick="mineClick()">⛏️ Minerar</button>
+<button onclick="toReady()">📦 Enviar estoque</button>
+<button onclick="sell()">💰 VENDER TUDO</button>
+
+<hr>
+
+<h3>🤖 Automação</h3>
+
+<button onclick="buyMiner()">🤖 Minerador ($50)</button>
+<button onclick="buySeller()">🚚 Vendedor automático ($150)</button>
+
+</div>
+
+<script>
+
+let money = 0;
+let storage = 0;
+let ready = 0;
+
+let currentMine = 1;
+
+let unlocked = {
+  1:true,
+  2:false,
+  3:false,
+  4:false,
+  5:false
+};
+
+function value(){
+  if(currentMine===1) return 1;
+  if(currentMine===2) return 3;
+  if(currentMine===3) return 8;
+  if(currentMine===4) return 20;
+  if(currentMine===5) return 120;
+}
+
+/* SELECIONAR MINA */
+function selectMine(id){
+  if(!unlocked[id]) return;
+
+  currentMine = id;
+
+  document.querySelectorAll(".mine").forEach(m=>m.classList.remove("active"));
+  document.getElementById("m"+id).classList.add("active");
+}
+
+/* COMPRAR MINA */
+function buyMine(id){
+
+  let cost = {
+    2:100,
+    3:300,
+    4:1000,
+    5:5000
+  };
+
+  if(money >= cost[id]){
+    money -= cost[id];
+    unlocked[id] = true;
+
+    document.getElementById("m"+id).classList.add("unlocked");
+  }
+
+  update();
+}
+
+/* MINERAR (CORRIGIDO) */
+function mineClick(){
+  storage += value();
+  update();
+}
+
+/* ESTOQUE */
+function toReady(){
+  ready += storage;
+  storage = 0;
+  update();
+}
+
+/* VENDER */
+function sell(){
+  money += ready * value();
+  ready = 0;
+  update();
+}
+
+/* AUTOMATIZAÇÃO */
+let miner=0;
+let seller=0;
+
+function buyMiner(){
+  if(money>=50){
+    money-=50;
+    miner++;
+  }
+  update();
+}
+
+function buySeller(){
+  if(money>=150){
+    money-=150;
+    seller++;
+  }
+  update();
+}
+
+/* LOOP AUTOMÁTICO */
+setInterval(()=>{
+
+  storage += miner * value();
+
+  let sellNow = Math.min(ready, seller);
+  ready -= sellNow;
+  money += sellNow * value();
+
+  update();
+
+},1000);
+
+function update(){
+  document.getElementById("money").innerText = money;
+  document.getElementById("storage").innerText = storage;
+  document.getElementById("ready").innerText = ready;
+}
+
+</script>
+
+</body>
+</html>
