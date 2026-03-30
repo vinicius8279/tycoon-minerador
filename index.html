@@ -5,70 +5,125 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tycoon Minerador PRO</title>
 
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#0b1d33;color:white}
-.app{max-width:420px;margin:auto;padding:15px}
-.card{background:#1e2f4a;padding:12px;border-radius:12px;margin-bottom:10px}
-button{width:100%;padding:12px;margin:6px 0;border:none;border-radius:10px;background:#ffcc00}
+body{
+  margin:0;
+  font-family:Arial;
+  background:linear-gradient(135deg,#0b1d33,#1e3c72);
+  color:white;
+}
+
+/* LOGIN */
+.login{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.card{
+  background:#142f52;
+  padding:20px;
+  border-radius:15px;
+  width:300px;
+  text-align:center;
+  box-shadow:0 0 20px rgba(0,0,0,0.5);
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin:8px 0;
+  border:none;
+  border-radius:8px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin:5px 0;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.loginBtn{background:#00c853;color:white;}
+.registerBtn{background:#ffcc00;}
+
+.app{
+  max-width:420px;
+  margin:auto;
+  padding:15px;
+}
+
+.gameCard{
+  background:#1e2f4a;
+  padding:12px;
+  border-radius:12px;
+  margin-bottom:10px;
+}
+
 .bar{height:10px;background:#333;border-radius:10px}
-.fill{height:100%;width:0%;background:lime}
+.fill{height:100%;background:lime;width:0%}
+
+.msg{text-align:center;margin-top:10px;}
 </style>
 </head>
 
 <body>
 
-<div id="login" class="app">
+<!-- LOGIN -->
+<div id="login" class="login">
 <div class="card">
 <h2>🎮 Tycoon Minerador</h2>
-<input id="email" placeholder="Email"><br><br>
-<input id="password" type="password" placeholder="Senha"><br><br>
-<button onclick="register()">Criar Conta</button>
-<button onclick="loginUser()">Entrar</button>
+
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Senha">
+
+<button class="loginBtn" onclick="loginUser()">Entrar</button>
+<button class="registerBtn" onclick="register()">Criar Conta</button>
+
+<div id="msg" class="msg"></div>
 </div>
 </div>
 
+<!-- GAME -->
 <div id="game" style="display:none" class="app">
 
-<div class="card">
+<div class="gameCard">
 👤 <span id="player"></span>
 <button onclick="logout()">🚪 Sair</button>
 </div>
 
-<div class="card">
+<div class="gameCard">
 💰 <span id="money">0</span><br>
 📦 <span id="storage">0</span><br>
 🚚 <span id="ready">0</span>
 <div class="bar"><div id="progress" class="fill"></div></div>
 </div>
 
-<div class="card">
+<div class="gameCard">
 <button onclick="mineClick()">⛏️ Minerar</button>
 <button onclick="toReady()">📦 Enviar</button>
 <button onclick="sell()">💰 Vender</button>
 </div>
 
-<div class="card">
+<div class="gameCard">
 <button onclick="buyMiner()">🤖 Minerador ($50)</button>
 <button onclick="buySeller()">🚚 Vendedor ($150)</button>
 </div>
 
-<div class="card">
+<div class="gameCard">
 <button onclick="saveManual()">💾 Salvar</button>
-</div>
-
-<div class="card">
-<h3>📊 Perfil</h3>
-Partidas: <span id="games">0</span>
-</div>
-
-<div class="card">
 <button onclick="saveScore()">🏆 Salvar Pontuação</button>
-<button onclick="openRanking()">📊 Meu Ranking</button>
-<div id="rankingList"></div>
+<button onclick="openRanking()">📊 Ver Ranking</button>
+<div id="ranking"></div>
 </div>
 
 </div>
@@ -87,14 +142,25 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 /* LOGIN */
+function email(){return document.getElementById("email").value;}
+function pass(){return document.getElementById("password").value;}
+
+function msg(t,c="white"){
+  let m=document.getElementById("msg");
+  m.innerText=t;
+  m.style.color=c;
+}
+
 function register(){
   auth.createUserWithEmailAndPassword(email(),pass())
-  .catch(e=>alert(e.message));
+  .then(()=>msg("Conta criada!","lime"))
+  .catch(e=>msg(e.message,"red"));
 }
 
 function loginUser(){
   auth.signInWithEmailAndPassword(email(),pass())
-  .catch(e=>alert(e.message));
+  .then(()=>msg("Entrando...","lime"))
+  .catch(e=>msg(e.message,"red"));
 }
 
 function logout(){
@@ -102,16 +168,12 @@ function logout(){
   location.reload();
 }
 
-function email(){return document.getElementById("email").value;}
-function pass(){return document.getElementById("password").value;}
-
 auth.onAuthStateChanged(user=>{
   if(user){
     document.getElementById("login").style.display="none";
     document.getElementById("game").style.display="block";
-    document.getElementById("player").innerText = user.email;
-    loadOnline();
-    loadStats();
+    document.getElementById("player").innerText=user.email;
+    loadGame();
   }
 });
 
@@ -128,13 +190,12 @@ function buySeller(){if(money>=150){money-=150;seller++;update();}}
 
 setInterval(()=>{
   storage+=miner;
-  let vendido=Math.min(ready,seller);
-  ready-=vendido;
-  money+=vendido;
+  let v=Math.min(ready,seller);
+  ready-=v;
+  money+=v;
   update();
 },1000);
 
-/* UPDATE */
 function update(){
   document.getElementById("money").innerText=money;
   document.getElementById("storage").innerText=storage;
@@ -144,22 +205,23 @@ function update(){
 
 /* SAVE */
 async function saveManual(){
-  await saveOnline();
-  alert("💾 Salvo!");
+  await saveGame();
+  alert("Salvo!");
 }
 
-async function saveOnline(){
+async function saveGame(){
   let u=auth.currentUser;
   if(!u)return;
+
   await db.collection("players").doc(u.uid).set({
     money,storage,ready,miner,seller
   });
 }
 
-setInterval(saveOnline,5000);
+setInterval(saveGame,5000);
 
 /* LOAD */
-async function loadOnline(){
+async function loadGame(){
   let u=auth.currentUser;
   if(!u)return;
 
@@ -177,57 +239,34 @@ async function loadOnline(){
   update();
 }
 
-/* STATS */
-async function loadStats(){
-  let u=auth.currentUser;
-  if(!u)return;
-
-  let snap = await db.collection("ranking")
-  .where("uid","==",u.uid)
-  .get();
-
-  document.getElementById("games").innerText = snap.size;
-}
-
-/* RANKING CORRIGIDO */
+/* RANKING */
 async function saveScore(){
   let u=auth.currentUser;
   if(!u)return;
 
   await db.collection("ranking").add({
     uid:u.uid,
+    name:u.email,
     score:money
   });
 
-  alert("🏆 Pontuação salva!");
+  alert("Pontuação salva!");
 }
 
 async function openRanking(){
-
-  let u=auth.currentUser;
-  if(!u)return;
-
-  let list=document.getElementById("rankingList");
+  let list=document.getElementById("ranking");
   list.innerHTML="Carregando...";
 
-  let snap = await db.collection("ranking")
-  .where("uid","==",u.uid)
+  let snap=await db.collection("ranking")
+  .orderBy("score","desc")
+  .limit(10)
   .get();
-
-  let data=[];
-
-  snap.forEach(doc=>{
-    data.push(doc.data());
-  });
-
-  data.sort((a,b)=>b.score-a.score);
-  data=data.slice(0,10);
 
   list.innerHTML="";
 
-  data.forEach((d,i)=>{
-    list.innerHTML += 
-    "<div class='card'>" + (i+1) + "º 💰 " + d.score + "</div>";
+  snap.forEach((doc,i)=>{
+    let d=doc.data();
+    list.innerHTML += `<div>${i+1}º 🏆 ${d.name} - 💰 ${d.score}</div>`;
   });
 }
 
