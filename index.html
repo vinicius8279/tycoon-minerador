@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tycoon Minerador PRO</title>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:linear-gradient(135deg,#0b1d33,#1e3c72);
+  color:white;
+}
+
+/* LOGIN */
+.login{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.card{
+  background:#142f52;
+  padding:20px;
+  border-radius:15px;
+  width:300px;
+  text-align:center;
+  box-shadow:0 0 20px rgba(0,0,0,0.5);
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin:8px 0;
+  border:none;
+  border-radius:8px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin:5px 0;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.loginBtn{background:#00c853;color:white;}
+.registerBtn{background:#ffcc00;}
+
+.app{
+  max-width:420px;
+  margin:auto;
+  padding:15px;
+}
+
+.gameCard{
+  background:#1e2f4a;
+  padding:12px;
+  border-radius:12px;
+  margin-bottom:10px;
+}
+
+.bar{height:10px;background:#333;border-radius:10px}
+.fill{height:100%;background:lime;width:0%}
+
+.msg{text-align:center;margin-top:10px;}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login">
+<div class="card">
+<h2>🎮 Tycoon Minerador</h2>
+
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Senha">
+
+<button class="loginBtn" onclick="loginUser()">Entrar</button>
+<button class="registerBtn" onclick="register()">Criar Conta</button>
+
+<div id="msg" class="msg"></div>
+</div>
+</div>
+
+<!-- GAME -->
+<div id="game" style="display:none" class="app">
+
+<div class="gameCard">
+👤 <span id="player"></span>
+<button onclick="logout()">🚪 Sair</button>
+</div>
+
+<div class="gameCard">
+💰 <span id="money">0</span><br>
+📦 <span id="storage">0</span><br>
+🚚 <span id="ready">0</span>
+<div class="bar"><div id="progress" class="fill"></div></div>
+</div>
+
+<div class="gameCard">
+<button onclick="mineClick()">⛏️ Minerar</button>
+<button onclick="toReady()">📦 Enviar</button>
+<button onclick="sell()">💰 Vender</button>
+</div>
+
+<div class="gameCard">
+<button onclick="buyMiner()">🤖 Minerador ($50)</button>
+<button onclick="buySeller()">🚚 Vendedor ($150)</button>
+</div>
+
+<div class="gameCard">
+<button onclick="saveManual()">💾 Salvar</button>
+<button onclick="saveScore()">🏆 Salvar Pontuação</button>
+<button onclick="openRanking()">📊 Ver Ranking</button>
+<div id="ranking"></div>
+</div>
+
+</div>
+
+<script>
+
+/* FIREBASE */
+const firebaseConfig = {
+  apiKey: "AIzaSyA5WrSyfcOhObMOwwJPlNl_Ok0t4shq5eg",
+  authDomain: "tycoon-minerador-profissional1.firebaseapp.com",
+  projectId: "tycoon-minerador-profissional1"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* LOGIN */
+function email(){return document.getElementById("email").value;}
+function pass(){return document.getElementById("password").value;}
+
+function msg(t,c="white"){
+  let m=document.getElementById("msg");
+  m.innerText=t;
+  m.style.color=c;
+}
+
+function register(){
+  auth.createUserWithEmailAndPassword(email(),pass())
+  .then(()=>msg("Conta criada!","lime"))
+  .catch(e=>msg(e.message,"red"));
+}
+
+function loginUser(){
+  auth.signInWithEmailAndPassword(email(),pass())
+  .then(()=>msg("Entrando...","lime"))
+  .catch(e=>msg(e.message,"red"));
+}
+
+function logout(){
+  auth.signOut();
+  location.reload();
+}
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    document.getElementById("login").style.display="none";
+    document.getElementById("game").style.display="block";
+    document.getElementById("player").innerText=user.email;
+    loadGame();
+  }
+});
+
+/* GAME */
+let money=0,storage=0,ready=0;
+let miner=0,seller=0;
+
+function mineClick(){storage++;update();}
+function toReady(){ready+=storage;storage=0;update();}
+function sell(){money+=ready;ready=0;update();}
+
+function buyMiner(){if(money>=50){money-=50;miner++;update();}}
+function buySeller(){if(money>=150){money-=150;seller++;update();}}
+
+setInterval(()=>{
+  storage+=miner;
+  let v=Math.min(ready,seller);
+  ready-=v;
+  money+=v;
+  update();
+},1000);
+
+function update(){
+  document.getElementById("money").innerText=money;
+  document.getElementById("storage").innerText=storage;
+  document.getElementById("ready").innerText=ready;
+  document.getElementById("progress").style.width=Math.min(storage,100)+"%";
+}
+
+/* SAVE */
+async function saveManual(){
+  await saveGame();
+  alert("Salvo!");
+}
+
+async function saveGame(){
+  let u=auth.currentUser;
+  if(!u)return;
+
+  await db.collection("players").doc(u.uid).set({
+    money,storage,ready,miner,seller
+  });
+}
+
+setInterval(saveGame,5000);
+
+/* LOAD */
+async function loadGame(){
+  let u=auth.currentUser;
+  if(!u)return;
+
+  let doc=await db.collection("players").doc(u.uid).get();
+
+  if(doc.exists){
+    let d=doc.data();
+    money=d.money||0;
+    storage=d.storage||0;
+    ready=d.ready||0;
+    miner=d.miner||0;
+    seller=d.seller||0;
+  }
+
+  update();
+}
+
+/* RANKING */
+async function saveScore(){
+  let u=auth.currentUser;
+  if(!u)return;
+
+  await db.collection("ranking").add({
+    uid:u.uid,
+    name:u.email,
+    score:money
+  });
+
+  alert("Pontuação salva!");
+}
+
+async function openRanking(){
+  let list=document.getElementById("ranking");
+  list.innerHTML="Carregando...";
+
+  let snap=await db.collection("ranking")
+  .orderBy("score","desc")
+  .limit(10)
+  .get();
+
+  list.innerHTML="";
+
+  snap.forEach((doc,i)=>{
+    let d=doc.data();
+    list.innerHTML += `<div>${i+1}º 🏆 ${d.name} - 💰 ${d.score}</div>`;
+  });
+}
+
+</script>
+
+</body>
+</html>
